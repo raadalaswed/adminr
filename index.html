@@ -3,370 +3,311 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>لوحة الإدارة — RA Secure Block</title>
+<title>RA Secure Block — صفحة محمية</title>
+
+<!-- ==========================================================================
+     RA SECURE BLOCK v2.0  —  الجزء (أ): قفل فوري + أنماط الكتلة  [رأس الصفحة]
+     انسخ هذا الجزء داخل <head> لأي صفحة تريد حمايتها.
+     يخفي الصفحة فورًا (قبل رسمها) ويظهر شاشة تحقق احترافية.
+     ========================================================================== -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<style>
-  :root{
-    --ink:#0b1120; --muted:#5b6472; --soft:#8b94a3; --line:#e7ebf1; --line2:#eef1f6;
-    --surface:#ffffff; --bg:#f1f4f8; --field:#f5f7fb;
-    --accent:#0ea5a4; --accent-ink:#0b7d7c; --accent-soft:#e7faf8;
-    --blue:#2563eb; --green:#059669; --amber:#b45309; --red:#dc2626; --slate:#475569;
-    --radius:16px; --font:"IBM Plex Sans Arabic","Segoe UI",system-ui,Tahoma,sans-serif;
-    --shadow:0 22px 55px -30px rgba(11,17,32,.5);
+<style id="ra-lock-style">
+  /* قفل فوري: أخفِ كل محتوى الصفحة حتى انتهاء التحقق. لا يُخفى إلا محتوى الصفحة، أما كتلة الحماية فتبقى ظاهرة. */
+  html.ra-locked body > *:not(#ra-secure-block){ display:none !important; }
+  html.ra-locked{ overflow:hidden; }
+
+  #ra-secure-block *{ box-sizing:border-box; }
+  #ra-secure-block{
+    --ra-ink:#0b1120; --ra-surface:#ffffff; --ra-muted:#5b6472; --ra-line:#e5e9f0;
+    --ra-accent:#0ea5a4; --ra-accent-ink:#0b7d7c; --ra-danger:#dc2626; --ra-warn:#b45309;
+    --ra-field:#f6f8fb; --ra-shadow:0 24px 60px -20px rgba(11,17,32,.35);
+    --ra-radius:16px; --ra-font:"IBM Plex Sans Arabic","Segoe UI",system-ui,Tahoma,sans-serif;
   }
-  *{ box-sizing:border-box; }
-  html.locked{ overflow:hidden; }
-  body{ margin:0; font-family:var(--font); color:var(--ink); background:var(--bg); -webkit-font-smoothing:antialiased; }
-  button{ font:inherit; cursor:pointer; }
-  input,select,textarea{ font:inherit; }
-  a{ color:inherit; }
+  #ra-secure-block{
+    position:fixed; inset:0; z-index:2147483000;
+    font-family:var(--ra-font); color:var(--ra-ink);
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  #ra-secure-block[hidden]{ display:none !important; }
 
-  /* ---------- طبقة الحماية (تحميل / رفض وصول) ---------- */
-  #gate{ position:fixed; inset:0; z-index:9000; display:grid; place-items:center; padding:24px;
-    background:radial-gradient(1000px 500px at 85% -10%,rgba(14,165,164,.10),transparent 60%),#f2f5f9; }
-  #gate[hidden]{ display:none; }
-  .gate-box{ text-align:center; max-width:400px; }
-  .spinner{ width:54px;height:54px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite;margin:0 auto 18px; }
-  @keyframes spin{ to{ transform:rotate(360deg); } }
-  .gate-title{ font-weight:700; font-size:18px; }
-  .gate-sub{ color:var(--muted); font-size:14px; margin-top:8px; line-height:1.7; }
-  .gate-icon{ width:64px;height:64px;border-radius:18px;display:grid;place-items:center;margin:0 auto 16px;font-size:30px;background:#fef2f2;color:#dc2626; }
+  /* طبقة التحقق الكاملة (تغطي كل شيء) */
+  .ra-scrim{
+    position:absolute; inset:0; display:grid; place-items:center; padding:24px;
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(14,165,164,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(59,130,246,.08), transparent 55%),
+      #f2f5f9;
+    overflow:auto;
+  }
 
-  /* ---------- التخطيط ---------- */
-  .app{ display:grid; grid-template-columns:264px 1fr; min-height:100vh; }
-  .app[hidden]{ display:none; }
+  /* شاشة التحميل */
+  .ra-loading{ display:flex; flex-direction:column; align-items:center; gap:20px; text-align:center; }
+  .ra-spinner{
+    width:56px; height:56px; border-radius:50%;
+    border:4px solid var(--ra-line); border-top-color:var(--ra-accent);
+    animation:ra-spin .8s linear infinite;
+  }
+  @keyframes ra-spin{ to{ transform:rotate(360deg); } }
+  .ra-loading-text{ font-weight:600; font-size:18px; color:var(--ra-ink); }
+  .ra-loading-sub{ font-size:14px; color:var(--ra-muted); max-width:340px; line-height:1.7; }
 
-  aside{ background:#0b1120; color:#cfd8e6; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; }
-  .brand{ display:flex; align-items:center; gap:11px; padding:22px 20px; border-bottom:1px solid rgba(255,255,255,.07); }
-  .brand-mark{ width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--blue));color:#fff;font-weight:700; }
-  .brand b{ color:#fff; font-size:15px; display:block; }
-  .brand span{ font-size:11.5px; color:#8b94a3; }
-  nav{ padding:14px 12px; display:flex; flex-direction:column; gap:3px; flex:1; overflow:auto; }
-  .nav-item{ display:flex; align-items:center; gap:11px; padding:11px 13px; border-radius:11px; color:#aeb8c8; background:transparent; border:0; width:100%; text-align:start; font-size:14.5px; font-weight:500; transition:background .15s,color .15s; }
-  .nav-item .ic{ width:20px; text-align:center; font-size:16px; }
-  .nav-item:hover{ background:rgba(255,255,255,.05); color:#fff; }
-  .nav-item.active{ background:rgba(14,165,164,.16); color:#fff; }
-  .nav-item .badge{ margin-inline-start:auto; background:var(--amber); color:#fff; font-size:11px; font-weight:700; padding:1px 8px; border-radius:20px; min-width:20px; text-align:center; }
-  .side-foot{ padding:14px; border-top:1px solid rgba(255,255,255,.07); }
-  .side-foot .who{ font-size:12.5px; color:#8b94a3; margin-bottom:10px; word-break:break-all; }
-  .side-foot .who b{ color:#e6ecf5; display:block; font-size:13.5px; }
-  .logout-btn{ width:100%; padding:10px; border-radius:10px; background:rgba(255,255,255,.06); color:#fff; border:1px solid rgba(255,255,255,.1); font-weight:600; font-size:13.5px; }
-  .logout-btn:hover{ background:rgba(220,38,38,.25); border-color:rgba(220,38,38,.4); }
+  /* البطاقات (تسجيل الدخول / التسجيل / الرسائل) */
+  .ra-card{
+    width:100%; max-width:440px; background:var(--ra-surface);
+    border:1px solid var(--ra-line); border-radius:var(--ra-radius);
+    box-shadow:var(--ra-shadow); padding:32px 28px; animation:ra-rise .35s cubic-bezier(.2,.7,.2,1);
+  }
+  @keyframes ra-rise{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
 
-  main{ padding:26px clamp(16px,3vw,34px); min-width:0; }
-  .page-head{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:22px; }
-  .page-head h1{ font-size:22px; margin:0; letter-spacing:-.3px; }
-  .page-head p{ margin:3px 0 0; color:var(--muted); font-size:13.5px; }
-  .menu-btn{ display:none; }
+  .ra-brand{ display:flex; align-items:center; gap:10px; margin-bottom:22px; }
+  .ra-brand-mark{
+    width:38px; height:38px; border-radius:11px; display:grid; place-items:center;
+    background:linear-gradient(135deg,var(--ra-accent),#2563eb); color:#fff; font-weight:700; font-size:15px;
+    box-shadow:0 8px 20px -8px rgba(14,165,164,.6);
+  }
+  .ra-brand-name{ font-weight:700; font-size:16px; letter-spacing:-.2px; }
+  .ra-brand-sub{ font-size:12px; color:var(--ra-muted); }
 
-  .section{ display:none; }
-  .section.active{ display:block; animation:fade .25s ease; }
-  @keyframes fade{ from{ opacity:0; transform:translateY(6px);} to{opacity:1;transform:none;} }
+  .ra-title{ font-size:22px; font-weight:700; margin:0 0 4px; letter-spacing:-.3px; }
+  .ra-lede{ font-size:14px; color:var(--ra-muted); margin:0 0 22px; line-height:1.7; }
 
-  /* ---------- بطاقات الإحصائيات ---------- */
-  .stats{ display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
-  .stat{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px 18px; }
-  .stat .k{ font-size:13px; color:var(--muted); display:flex; align-items:center; gap:8px; }
-  .stat .k i{ width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-style:normal;font-size:14px; }
-  .stat .v{ font-size:28px; font-weight:700; margin-top:8px; letter-spacing:-.5px; }
-  .i-all{ background:#eef2ff;color:#4f46e5; } .i-ok{ background:#ecfdf5;color:#059669; }
-  .i-pend{ background:#fffbeb;color:#b45309; } .i-block{ background:#fef2f2;color:#dc2626; }
-  .i-rej{ background:#f8fafc;color:#475569; } .i-login{ background:#e7faf8;color:#0b7d7c; }
-  .i-new{ background:#eff6ff;color:#2563eb; }
+  .ra-field{ margin-bottom:14px; }
+  .ra-field label{ display:block; font-size:13px; font-weight:600; margin-bottom:7px; color:#2b333f; }
+  .ra-input{
+    width:100%; height:46px; padding:0 14px; font:inherit; font-size:15px; color:var(--ra-ink);
+    background:var(--ra-field); border:1.5px solid transparent; border-radius:11px; outline:none;
+    transition:border-color .15s, background .15s;
+  }
+  .ra-input::placeholder{ color:#9aa3b2; }
+  .ra-input:focus{ background:#fff; border-color:var(--ra-accent); }
+  .ra-input:disabled{ opacity:.6; cursor:not-allowed; }
 
-  /* ---------- شريط أدوات (بحث/فلاتر) ---------- */
-  .toolbar{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin:20px 0 16px; }
-  .search{ position:relative; flex:1; min-width:220px; }
-  .search input{ width:100%; height:44px; padding:0 42px 0 14px; background:var(--surface); border:1.5px solid var(--line); border-radius:12px; outline:none; }
-  .search input:focus{ border-color:var(--accent); }
-  .search .si{ position:absolute; inset-inline-start:14px; top:50%; transform:translateY(-50%); color:var(--soft); }
-  .chips{ display:flex; gap:7px; flex-wrap:wrap; }
-  .chip{ padding:9px 15px; border-radius:20px; background:var(--surface); border:1.5px solid var(--line); font-size:13px; font-weight:600; color:var(--slate); }
-  .chip.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .ra-btn{
+    width:100%; height:48px; border:0; border-radius:11px; cursor:pointer;
+    font:inherit; font-size:15px; font-weight:600; color:#fff;
+    background:linear-gradient(135deg,var(--ra-accent),var(--ra-accent-ink));
+    transition:transform .06s, box-shadow .15s, opacity .15s;
+    box-shadow:0 10px 24px -12px rgba(14,165,164,.9); display:flex; align-items:center; justify-content:center; gap:9px;
+  }
+  .ra-btn:hover{ box-shadow:0 14px 30px -12px rgba(14,165,164,.95); }
+  .ra-btn:active{ transform:translateY(1px); }
+  .ra-btn[disabled]{ opacity:.65; cursor:not-allowed; box-shadow:none; }
+  .ra-btn.ra-ghost{
+    background:transparent; color:var(--ra-accent-ink); box-shadow:none; height:auto; padding:0;
+    font-size:14px; width:auto; text-decoration:none;
+  }
+  .ra-btn.ra-ghost:hover{ text-decoration:underline; }
+  .ra-btn.ra-secondary{
+    background:var(--ra-field); color:var(--ra-ink); box-shadow:none;
+    border:1.5px solid var(--ra-line);
+  }
 
-  /* ---------- بطاقات المستخدمين ---------- */
-  .cards{ display:grid; gap:12px; }
-  .ucard{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px 18px; }
-  .ucard-top{ display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap; }
-  .avatar{ width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:700;color:#fff;flex:0 0 auto;background:linear-gradient(135deg,#0ea5a4,#2563eb); }
-  .u-main{ min-width:0; flex:1; }
-  .u-name{ font-weight:700; font-size:15.5px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .u-email{ color:var(--muted); font-size:13.5px; word-break:break-all; }
-  .u-meta{ display:flex; gap:14px 20px; flex-wrap:wrap; margin-top:10px; font-size:12.5px; color:var(--muted); }
-  .u-meta b{ color:var(--ink); font-weight:600; }
-  .uid{ font-family:ui-monospace,monospace; font-size:11.5px; background:var(--field); padding:2px 7px; border-radius:6px; direction:ltr; display:inline-block; }
-  .pill{ font-size:11.5px; font-weight:700; padding:3px 10px; border-radius:20px; }
-  .pill.approved{ background:#ecfdf5;color:#059669; } .pill.pending{ background:#fffbeb;color:#b45309; }
-  .pill.blocked{ background:#fef2f2;color:#dc2626; } .pill.rejected{ background:#f1f5f9;color:#475569; }
-  .pill.role{ background:#eef2ff;color:#4f46e5; }
-  .pill.verify-yes{ background:#ecfdf5;color:#059669; } .pill.verify-no{ background:#fff7ed;color:#c2410c; }
-  .u-actions{ display:flex; gap:7px; flex-wrap:wrap; margin-top:14px; padding-top:14px; border-top:1px solid var(--line2); }
-  .act{ padding:7px 12px; border-radius:9px; border:1.5px solid var(--line); background:var(--surface); font-size:12.5px; font-weight:600; color:var(--slate); }
-  .act:hover{ border-color:var(--accent); color:var(--accent-ink); }
-  .act.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
-  .act.primary:hover{ filter:brightness(.96); color:#fff; }
-  .act.danger{ color:var(--red); border-color:#fbd5d5; } .act.danger:hover{ background:#fef2f2; }
-  .empty{ text-align:center; padding:48px 20px; color:var(--soft); background:var(--surface); border:1px dashed var(--line); border-radius:14px; }
-  .empty .e-ic{ font-size:34px; opacity:.5; margin-bottom:10px; }
+  .ra-btn-spin{ width:18px; height:18px; border-radius:50%; border:2.5px solid rgba(255,255,255,.45); border-top-color:#fff; animation:ra-spin .7s linear infinite; }
 
-  /* ---------- جدول السجل ---------- */
-  .logs{ background:var(--surface); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
-  .log-row{ display:grid; grid-template-columns:150px 130px 1fr 180px; gap:12px; padding:13px 18px; border-bottom:1px solid var(--line2); align-items:center; font-size:13px; }
-  .log-row:last-child{ border-bottom:0; }
-  .log-row.head{ background:var(--field); font-weight:700; font-size:12px; color:var(--muted); }
-  .log-time{ color:var(--muted); font-size:12px; }
-  .log-act{ font-weight:700; padding:3px 9px; border-radius:7px; font-size:11.5px; display:inline-block; background:var(--field); color:var(--slate); }
-  .log-act.login,.log-act.approve,.log-act.unblock{ background:#ecfdf5; color:#059669; }
-  .log-act.logout{ background:#eef2ff; color:#4f46e5; }
-  .log-act.register{ background:#e7faf8; color:#0b7d7c; }
-  .log-act.reject,.log-act.block,.log-act.delete{ background:#fef2f2; color:#dc2626; }
-  .log-mail{ font-size:12px; color:var(--muted); word-break:break-all; }
+  .ra-row{ display:flex; align-items:center; justify-content:space-between; margin:6px 0 18px; gap:10px; flex-wrap:wrap; }
+  .ra-check{ display:flex; align-items:center; gap:8px; font-size:13.5px; color:#2b333f; cursor:pointer; user-select:none; }
+  .ra-check input{ width:16px; height:16px; accent-color:var(--ra-accent); }
 
-  /* ---------- الإعدادات ---------- */
-  .settings-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; align-items:start; }
-  .panel{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:20px; }
-  .panel h3{ margin:0 0 4px; font-size:15px; }
-  .panel .desc{ color:var(--muted); font-size:12.5px; margin:0 0 16px; }
-  .set-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid var(--line2); }
-  .set-row:last-of-type{ border-bottom:0; }
-  .set-row label{ font-size:13.5px; font-weight:600; }
-  .set-row .hint{ font-size:11.5px; color:var(--soft); font-weight:400; margin-top:2px; }
-  .switch{ position:relative; width:44px; height:25px; flex:0 0 auto; }
-  .switch input{ opacity:0; width:0; height:0; }
-  .track{ position:absolute; inset:0; background:#cbd5e1; border-radius:20px; transition:.2s; }
-  .track::before{ content:""; position:absolute; width:19px;height:19px; background:#fff; border-radius:50%; top:3px; right:3px; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
-  .switch input:checked + .track{ background:var(--accent); }
-  .switch input:checked + .track::before{ transform:translateX(-19px); }
-  .num-input{ width:96px; height:38px; padding:0 12px; background:var(--field); border:1.5px solid transparent; border-radius:9px; outline:none; text-align:center; }
-  .num-input:focus{ background:#fff; border-color:var(--accent); }
-  .set-field{ margin-bottom:14px; }
-  .set-field label{ display:block; font-size:13px; font-weight:600; margin-bottom:6px; }
-  .set-field textarea{ width:100%; min-height:70px; padding:11px 13px; background:var(--field); border:1.5px solid transparent; border-radius:10px; outline:none; resize:vertical; line-height:1.7; }
-  .set-field textarea:focus{ background:#fff; border-color:var(--accent); }
-  .save-bar{ margin-top:18px; display:flex; gap:10px; align-items:center; }
-  .btn{ height:44px; padding:0 22px; border-radius:11px; border:0; font-weight:600; color:#fff; background:linear-gradient(135deg,var(--accent),var(--accent-ink)); }
-  .btn.ghost{ background:var(--field); color:var(--ink); border:1.5px solid var(--line); }
-  .btn[disabled]{ opacity:.6; cursor:not-allowed; }
+  .ra-alt{ text-align:center; margin-top:20px; font-size:14px; color:var(--ra-muted); }
+  .ra-alt a{ color:var(--ra-accent-ink); font-weight:600; cursor:pointer; text-decoration:none; }
+  .ra-alt a:hover{ text-decoration:underline; }
 
-  /* ---------- النوافذ (Modals) ---------- */
-  .modal-scrim{ position:fixed; inset:0; z-index:9500; background:rgba(11,17,32,.5); display:none; place-items:center; padding:20px; backdrop-filter:blur(2px); }
-  .modal-scrim.show{ display:grid; }
-  .modal{ width:100%; max-width:460px; background:#fff; border-radius:16px; padding:24px; box-shadow:var(--shadow); animation:fade .2s; }
-  .modal h3{ margin:0 0 6px; font-size:18px; }
-  .modal p{ margin:0 0 16px; color:var(--muted); font-size:13.5px; line-height:1.7; }
-  .modal textarea,.modal input{ width:100%; padding:11px 13px; background:var(--field); border:1.5px solid transparent; border-radius:10px; outline:none; margin-bottom:6px; }
-  .modal textarea{ min-height:90px; resize:vertical; line-height:1.7; }
-  .modal textarea:focus,.modal input:focus{ background:#fff; border-color:var(--accent); }
-  .modal-err{ color:var(--red); font-size:12.5px; min-height:18px; margin-bottom:10px; }
-  .modal-actions{ display:flex; gap:10px; justify-content:flex-start; margin-top:8px; }
+  .ra-feedback{
+    display:none; align-items:flex-start; gap:9px; margin-bottom:16px; padding:12px 14px;
+    border-radius:11px; font-size:13.5px; line-height:1.6; border:1px solid transparent;
+  }
+  .ra-feedback.show{ display:flex; }
+  .ra-feedback.err{ background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+  .ra-feedback.ok{ background:#ecfdf5; border-color:#a7f3d0; color:#065f46; }
+  .ra-feedback .ra-fi{ flex:0 0 auto; margin-top:1px; }
 
-  /* ---------- التنبيهات (Toasts) ---------- */
-  #toasts{ position:fixed; inset-block-end:22px; inset-inline-start:22px; z-index:9800; display:flex; flex-direction:column; gap:10px; }
-  .toast{ background:#0b1120; color:#fff; padding:13px 18px; border-radius:12px; font-size:13.5px; font-weight:500; box-shadow:var(--shadow); display:flex; align-items:center; gap:10px; animation:fade .2s; max-width:360px; }
-  .toast.ok{ background:#065f46; } .toast.err{ background:#991b1b; } .toast.info{ background:#1e3a5f; }
+  /* شاشات حالة الحساب / الرسائل */
+  .ra-state{ text-align:center; }
+  .ra-state-icon{
+    width:64px; height:64px; border-radius:18px; display:grid; place-items:center; margin:0 auto 18px;
+    font-size:30px;
+  }
+  .ra-state-icon.wait{ background:#fffbeb; color:#b45309; }
+  .ra-state-icon.stop{ background:#fef2f2; color:#dc2626; }
+  .ra-state-icon.ok{ background:#ecfdf5; color:#059669; }
+  .ra-state-reason{
+    margin-top:14px; padding:12px 14px; background:var(--ra-field); border:1px solid var(--ra-line);
+    border-radius:11px; font-size:13.5px; color:#2b333f; text-align:start; line-height:1.7;
+  }
+  .ra-state-reason b{ display:block; margin-bottom:4px; color:var(--ra-muted); font-weight:600; font-size:12px; }
+  .ra-state .ra-actions{ margin-top:22px; display:flex; flex-direction:column; gap:10px; }
 
-  @media (max-width:860px){
-    .app{ grid-template-columns:1fr; }
-    aside{ position:fixed; inset-inline-start:0; top:0; height:100vh; width:270px; transform:translateX(100%); transition:transform .25s; z-index:9200; }
-    html[dir=rtl] aside{ transform:translateX(100%); }
-    aside.open{ transform:translateX(0); }
-    .menu-btn{ display:inline-grid; place-items:center; width:42px;height:42px;border-radius:11px;background:var(--surface);border:1.5px solid var(--line); }
-    .scrim-nav{ position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:9100; display:none; }
-    .scrim-nav.show{ display:block; }
-    .log-row{ grid-template-columns:1fr; gap:4px; }
-    .log-row.head{ display:none; }
+  @media (max-width:480px){
+    .ra-card{ padding:26px 20px; border-radius:14px; }
+    .ra-title{ font-size:20px; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    #ra-secure-block *{ animation-duration:.001ms !important; }
+    .ra-spinner,.ra-btn-spin{ animation-duration:.8s !important; }
   }
 </style>
+<script>
+  /* قفل فوري متزامن: يُنفَّذ قبل رسم الصفحة، فلا يظهر أي جزء منها ولو لجزء من الثانية. */
+  document.documentElement.classList.add('ra-locked');
+</script>
+<!-- ======================  نهاية الجزء (أ) من RA Secure Block  ====================== -->
 </head>
+
 <body>
 
-<!-- ============ طبقة الحماية: تحميل / رفض الوصول ============ -->
-<div id="gate">
-  <div class="gate-box" id="gate-loading">
-    <div class="spinner"></div>
-    <div class="gate-title">جاري التحقق من الصلاحية...</div>
-    <div class="gate-sub">يرجى الانتظار بينما نتأكد من صلاحيات حسابك.</div>
-  </div>
-  <div class="gate-box" id="gate-denied" hidden>
-    <div class="gate-icon">⛔</div>
-    <div class="gate-title">ليس لديك صلاحية للوصول إلى لوحة الإدارة</div>
-    <div class="gate-sub">سيتم تحويلك إلى الصفحة الرئيسية...</div>
-  </div>
-</div>
-
-<div class="scrim-nav" id="scrim-nav"></div>
-
-<!-- ============ التطبيق ============ -->
-<div class="app" id="app" hidden>
-  <aside id="aside">
-    <div class="brand">
-      <div class="brand-mark">RA</div>
-      <div><b>لوحة الإدارة</b><span>RA Secure Block v2.0</span></div>
+<!-- ==========================================================================
+     محتوى الصفحة المحمية (مثال توضيحي فقط — استبدله بمحتوى صفحتك الحقيقي).
+     لن يظهر هذا المحتوى إلا بعد نجاح جميع عمليات التحقق داخل RA Secure Block.
+     ========================================================================== -->
+<main style="max-width:960px;margin:0 auto;padding:48px 20px;font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;color:#0b1120;">
+  <header style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:28px;">
+    <div>
+      <h1 style="margin:0;font-size:24px;">لوحة المبيعات</h1>
+      <p style="margin:4px 0 0;color:#5b6472;">مرحبًا <span data-ra-name>—</span> · <span data-ra-email>—</span></p>
     </div>
-    <nav id="nav">
-      <button class="nav-item active" data-sec="dashboard"><span class="ic">▦</span> لوحة المعلومات</button>
-      <button class="nav-item" data-sec="pending"><span class="ic">🕓</span> طلبات التسجيل <span class="badge" id="pending-badge" hidden>0</span></button>
-      <button class="nav-item" data-sec="users"><span class="ic">👥</span> إدارة المستخدمين</button>
-      <button class="nav-item" data-sec="logs"><span class="ic">📜</span> سجل النشاط</button>
-      <button class="nav-item" data-sec="settings"><span class="ic">⚙️</span> الإعدادات</button>
-    </nav>
-    <div class="side-foot">
-      <div class="who"><b id="admin-name">—</b><span id="admin-email">—</span></div>
-      <button class="logout-btn" id="logout">تسجيل الخروج</button>
+    <button data-ra-logout style="height:42px;padding:0 18px;border:1.5px solid #e5e9f0;background:#f6f8fb;border-radius:11px;font:inherit;font-weight:600;cursor:pointer;color:#0b1120;">
+      تسجيل الخروج
+    </button>
+  </header>
+  <section style="border:1px solid #e5e9f0;border-radius:16px;padding:24px;background:#fff;">
+    <p style="margin:0;color:#5b6472;line-height:1.8;">
+      هذه صفحة محمية بواسطة <b>RA Secure Block</b>. لن تراها إلا الحسابات التي حالتها
+      <b>approved</b>. كل ما عليك لحماية أي صفحة أخرى هو نسخ جزأَي الكتلة (أ) و(ب) داخلها.
+    </p>
+  </section>
+</main>
+
+<!-- ==========================================================================
+     RA SECURE BLOCK v2.0  —  الجزء (ب): واجهات الكتلة + المنطق الكامل  [نهاية الجسم]
+     انسخ هذا الجزء قبل إغلاق </body> لأي صفحة تريد حمايتها.
+     يتضمن: شاشة التحميل، تسجيل الدخول، إنشاء الحساب، استعادة كلمة المرور،
+     شاشات حالات الحساب، ومنطق Firebase الكامل. لا يحتاج أي تعديل بعد النسخ.
+     ========================================================================== -->
+<div id="ra-secure-block" role="region" aria-label="حماية الصفحة">
+  <div class="ra-scrim">
+
+    <!-- (1) شاشة التحميل -->
+    <div class="ra-loading" data-ra-view="loading">
+      <div class="ra-spinner" aria-hidden="true"></div>
+      <div class="ra-loading-text" data-ra-loading-text>جاري التحقق...</div>
+      <div class="ra-loading-sub" data-ra-loading-sub>يرجى الانتظار قليلًا بينما نتأكد من صلاحية حسابك.</div>
     </div>
-  </aside>
 
-  <main>
-    <!-- لوحة المعلومات -->
-    <section class="section active" data-section="dashboard">
-      <div class="page-head">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <button class="menu-btn" id="menu-btn">☰</button>
-          <div><h1>لوحة المعلومات</h1><p>نظرة عامة محدّثة مباشرةً على حالة النظام.</p></div>
+    <!-- (2) تسجيل الدخول -->
+    <div class="ra-card" data-ra-view="login" hidden>
+      <div class="ra-brand">
+        <div class="ra-brand-mark">RA</div>
+        <div>
+          <div class="ra-brand-name">RA Secure Block</div>
+          <div class="ra-brand-sub">تسجيل الدخول الآمن</div>
         </div>
       </div>
-      <div class="stats" id="stats"></div>
-    </section>
+      <h2 class="ra-title">تسجيل الدخول</h2>
+      <p class="ra-lede">أدخل بيانات حسابك للمتابعة إلى الخدمة.</p>
 
-    <!-- طلبات التسجيل -->
-    <section class="section" data-section="pending">
-      <div class="page-head">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <button class="menu-btn" id="menu-btn2">☰</button>
-          <div><h1>طلبات التسجيل</h1><p>الحسابات بانتظار الموافقة، مرتّبة من الأحدث.</p></div>
-        </div>
-      </div>
-      <div class="cards" id="pending-list"></div>
-    </section>
+      <div class="ra-feedback" data-ra-fb="login"><span class="ra-fi">⚠️</span><span data-ra-fb-text></span></div>
 
-    <!-- إدارة المستخدمين -->
-    <section class="section" data-section="users">
-      <div class="page-head">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <button class="menu-btn" id="menu-btn3">☰</button>
-          <div><h1>إدارة المستخدمين</h1><p>جميع المستخدمين مع كامل الإجراءات.</p></div>
-        </div>
+      <div class="ra-field">
+        <label for="ra-login-email">البريد الإلكتروني</label>
+        <input class="ra-input" id="ra-login-email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" />
       </div>
-      <div class="toolbar">
-        <div class="search">
-          <span class="si">🔎</span>
-          <input id="user-search" type="search" placeholder="بحث بالاسم أو البريد أو UID..." />
-        </div>
-        <div class="chips" id="filters">
-          <button class="chip active" data-filter="all">الكل</button>
-          <button class="chip" data-filter="pending">Pending</button>
-          <button class="chip" data-filter="approved">Approved</button>
-          <button class="chip" data-filter="blocked">Blocked</button>
-          <button class="chip" data-filter="rejected">Rejected</button>
-        </div>
+      <div class="ra-field">
+        <label for="ra-login-pass">كلمة المرور</label>
+        <input class="ra-input" id="ra-login-pass" type="password" autocomplete="current-password" placeholder="••••••••" />
       </div>
-      <div class="cards" id="users-list"></div>
-    </section>
 
-    <!-- سجل النشاط -->
-    <section class="section" data-section="logs">
-      <div class="page-head">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <button class="menu-btn" id="menu-btn4">☰</button>
-          <div><h1>سجل النشاط</h1><p>كل العمليات، من الأحدث إلى الأقدم.</p></div>
-        </div>
+      <div class="ra-row">
+        <label class="ra-check"><input type="checkbox" id="ra-remember" /> تذكّرني</label>
+        <a class="ra-btn ra-ghost" data-ra-go="forgot">نسيت كلمة المرور؟</a>
       </div>
-      <div class="toolbar">
-        <div class="search">
-          <span class="si">🔎</span>
-          <input id="log-search" type="search" placeholder="بحث في السجل (عملية، بريد، تفاصيل)..." />
-        </div>
-      </div>
-      <div class="logs" id="logs-list"></div>
-    </section>
 
-    <!-- الإعدادات -->
-    <section class="section" data-section="settings">
-      <div class="page-head">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <button class="menu-btn" id="menu-btn5">☰</button>
-          <div><h1>إعدادات النظام</h1><p>تُطبَّق مباشرةً على جميع الخدمات.</p></div>
-        </div>
-      </div>
-      <div class="settings-grid">
-        <div class="panel">
-          <h3>التحكم العام</h3>
-          <p class="desc">تفعيل أو تعطيل ميزات النظام الأساسية.</p>
-          <div class="set-row">
-            <div><label>فتح التسجيل</label><div class="hint">السماح بإنشاء حسابات جديدة</div></div>
-            <label class="switch"><input type="checkbox" id="s-registration"><span class="track"></span></label>
-          </div>
-          <div class="set-row">
-            <div><label>طلب التحقق من البريد</label><div class="hint">إرسال رسالة تحقق بعد التسجيل</div></div>
-            <label class="switch"><input type="checkbox" id="s-emailverify"><span class="track"></span></label>
-          </div>
-          <div class="set-row">
-            <div><label>وضع الصيانة</label><div class="hint">إيقاف الخدمات مؤقتًا</div></div>
-            <label class="switch"><input type="checkbox" id="s-maintenance"><span class="track"></span></label>
-          </div>
-          <div class="set-row">
-            <div><label>تفعيل «تذكّرني»</label><div class="hint">إبقاء الجلسة بعد إغلاق المتصفح</div></div>
-            <label class="switch"><input type="checkbox" id="s-remember"><span class="track"></span></label>
-          </div>
-        </div>
+      <button class="ra-btn" data-ra-action="login">
+        <span data-ra-btn-label>تسجيل الدخول</span>
+      </button>
 
-        <div class="panel">
-          <h3>حدود الجلسة</h3>
-          <p class="desc">القيم بالدقائق / عدد المحاولات.</p>
-          <div class="set-row">
-            <div><label>مدة الجلسة (دقيقة)</label><div class="hint">0 = بلا حد</div></div>
-            <input class="num-input" id="s-timeout" type="number" min="0" />
-          </div>
-          <div class="set-row">
-            <div><label>محاولات الدخول القصوى</label><div class="hint">قبل الإيقاف المؤقت</div></div>
-            <input class="num-input" id="s-attempts" type="number" min="0" />
-          </div>
-        </div>
-
-        <div class="panel">
-          <h3>الرسائل القابلة للتعديل</h3>
-          <p class="desc">تظهر للمستخدم حسب حالة حسابه.</p>
-          <div class="set-field"><label>رسالة «بانتظار الموافقة»</label><textarea id="s-msg-pending"></textarea></div>
-          <div class="set-field"><label>رسالة «حساب موقوف»</label><textarea id="s-msg-blocked"></textarea></div>
-          <div class="set-field"><label>رسالة «تم الرفض»</label><textarea id="s-msg-rejected"></textarea></div>
-        </div>
-      </div>
-      <div class="save-bar">
-        <button class="btn" id="save-settings">حفظ الإعدادات</button>
-        <span id="settings-status" style="color:var(--muted);font-size:13px;"></span>
-      </div>
-    </section>
-  </main>
-</div>
-
-<!-- ============ النوافذ ============ -->
-<div class="modal-scrim" id="modal-scrim">
-  <div class="modal" id="modal">
-    <h3 id="modal-title">—</h3>
-    <p id="modal-desc"></p>
-    <div id="modal-body"></div>
-    <div class="modal-err" id="modal-err"></div>
-    <div class="modal-actions">
-      <button class="btn" id="modal-confirm">تأكيد</button>
-      <button class="btn ghost" id="modal-cancel">إلغاء</button>
+      <p class="ra-alt">ليس لديك حساب؟ <a data-ra-go="register">إنشاء حساب</a></p>
     </div>
+
+    <!-- (3) إنشاء حساب -->
+    <div class="ra-card" data-ra-view="register" hidden>
+      <div class="ra-brand">
+        <div class="ra-brand-mark">RA</div>
+        <div>
+          <div class="ra-brand-name">RA Secure Block</div>
+          <div class="ra-brand-sub">حساب جديد</div>
+        </div>
+      </div>
+      <h2 class="ra-title">إنشاء حساب</h2>
+      <p class="ra-lede">أنشئ حسابك، وسيتم تفعيله بعد موافقة الإدارة.</p>
+
+      <div class="ra-feedback" data-ra-fb="register"><span class="ra-fi">⚠️</span><span data-ra-fb-text></span></div>
+
+      <div class="ra-field">
+        <label for="ra-reg-name">الاسم الكامل</label>
+        <input class="ra-input" id="ra-reg-name" type="text" autocomplete="name" placeholder="الاسم كما تريد ظهوره" />
+      </div>
+      <div class="ra-field">
+        <label for="ra-reg-email">البريد الإلكتروني</label>
+        <input class="ra-input" id="ra-reg-email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" />
+      </div>
+      <div class="ra-field">
+        <label for="ra-reg-pass">كلمة المرور</label>
+        <input class="ra-input" id="ra-reg-pass" type="password" autocomplete="new-password" placeholder="٦ أحرف على الأقل" />
+      </div>
+
+      <button class="ra-btn" data-ra-action="register" style="margin-top:6px;">
+        <span data-ra-btn-label>إنشاء الحساب</span>
+      </button>
+
+      <p class="ra-alt">لديك حساب بالفعل؟ <a data-ra-go="login">تسجيل الدخول</a></p>
+    </div>
+
+    <!-- (4) استعادة كلمة المرور -->
+    <div class="ra-card" data-ra-view="forgot" hidden>
+      <div class="ra-brand">
+        <div class="ra-brand-mark">RA</div>
+        <div>
+          <div class="ra-brand-name">RA Secure Block</div>
+          <div class="ra-brand-sub">استعادة الوصول</div>
+        </div>
+      </div>
+      <h2 class="ra-title">استعادة كلمة المرور</h2>
+      <p class="ra-lede">أدخل بريدك الإلكتروني وسنرسل إليك رابط إعادة التعيين.</p>
+
+      <div class="ra-feedback" data-ra-fb="forgot"><span class="ra-fi">⚠️</span><span data-ra-fb-text></span></div>
+
+      <div class="ra-field">
+        <label for="ra-forgot-email">البريد الإلكتروني</label>
+        <input class="ra-input" id="ra-forgot-email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" />
+      </div>
+
+      <button class="ra-btn" data-ra-action="forgot">
+        <span data-ra-btn-label>إرسال الرابط</span>
+      </button>
+
+      <p class="ra-alt"><a data-ra-go="login">العودة لتسجيل الدخول</a></p>
+    </div>
+
+    <!-- (5) شاشة حالة الحساب / الرسائل (تُملأ ديناميكيًا) -->
+    <div class="ra-card ra-state" data-ra-view="state" hidden>
+      <div class="ra-state-icon wait" data-ra-state-icon>⏳</div>
+      <h2 class="ra-title" data-ra-state-title>—</h2>
+      <p class="ra-lede" data-ra-state-text style="margin-bottom:0;">—</p>
+      <div class="ra-state-reason" data-ra-state-reason hidden><b>سبب الرفض</b><span data-ra-state-reason-text></span></div>
+      <div class="ra-actions">
+        <button class="ra-btn ra-secondary" data-ra-action="switch-account">العودة لتسجيل الدخول بحساب آخر</button>
+      </div>
+    </div>
+
   </div>
 </div>
-
-<div id="toasts"></div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signOut, sendPasswordResetEmail }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import {
-    getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
-    collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-  /* ======= الإعدادات ======= */
+  /* ====================================================================
+     RA Secure Block — إعدادات المشروع (المكان الوحيد الذي قد تعدّله)
+     ==================================================================== */
   const firebaseConfig = {
     apiKey: "AIzaSyC7EVNCSl48CQgIC_a8wdC5UG2tKLtNKjQ",
     authDomain: "garag-system.firebaseapp.com",
@@ -376,505 +317,476 @@
     messagingSenderId: "330947022055",
     appId: "1:330947022055:web:d0c9d378e200c7de45a642"
   };
-  const HOME_PAGE = "index.html"; // وجهة إعادة التوجيه لغير الأدمن
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+  /* الرسائل الافتراضية — يمكن للأدمن تجاوزها عبر settings/general إذا كانت قابلة للقراءة. */
+  const DEFAULT_MESSAGES = {
+    pending:  "حسابك بانتظار موافقة الإدارة. ستتمكن من استخدام الخدمات فور الموافقة.",
+    blocked:  "تم إيقاف حسابك. يرجى التواصل مع الإدارة لمزيد من المعلومات.",
+    rejected: "تم رفض طلب التسجيل الخاص بك."
+  };
+  const DEFAULT_SETTINGS = { registrationEnabled: true, emailVerificationRequired: false };
 
-  const $ = id => document.getElementById(id);
-  document.documentElement.classList.add('locked');
+  /* ====================================================================
+     تحميل حزم Firebase (نفس إصدار 10.12.0)
+     ==================================================================== */
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getAuth, browserLocalPersistence, browserSessionPersistence, setPersistence,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged,
+    sendPasswordResetEmail, sendEmailVerification
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp, increment,
+    collection, addDoc, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  /* ======= أدوات مساعدة ======= */
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  function fmtDate(ts){
-    if (!ts) return '—';
-    const d = ts.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
-    if (!d) return '—';
-    return d.toLocaleString('ar', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+  /* ====================================================================
+     أدوات الواجهة
+     ==================================================================== */
+  const root  = document.getElementById('ra-secure-block');
+  const $      = (sel, ctx=root) => ctx.querySelector(sel);
+  const views  = {
+    loading:  $('[data-ra-view="loading"]'),
+    login:    $('[data-ra-view="login"]'),
+    register: $('[data-ra-view="register"]'),
+    forgot:   $('[data-ra-view="forgot"]'),
+    state:    $('[data-ra-view="state"]'),
+  };
+
+  function showView(name){
+    Object.entries(views).forEach(([k, el]) => { el.hidden = (k !== name); });
+    clearAllFeedback();
   }
-  function isToday(ts){
-    if (!ts || !ts.toDate) return false;
-    const d = ts.toDate(), n = new Date();
-    return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate();
+  function setLoading(text, sub){
+    $('[data-ra-loading-text]').textContent = text || 'جاري التحقق...';
+    if (sub !== undefined) $('[data-ra-loading-sub]').textContent = sub;
+    showView('loading');
   }
-  function initials(name, email){
-    const s = (name || email || '?').trim();
-    return s.slice(0,2).toUpperCase();
+  function revealPage(userData){
+    // تعبئة عناصر الصفحة الاختيارية بمعلومات المستخدم
+    document.querySelectorAll('[data-ra-name]').forEach(el => el.textContent = userData?.name || '');
+    document.querySelectorAll('[data-ra-email]').forEach(el => el.textContent = userData?.email || '');
+    root.setAttribute('hidden', '');
+    document.documentElement.classList.remove('ra-locked');
   }
-  function toast(msg, type='ok'){
-    const t = document.createElement('div');
-    t.className = `toast ${type}`;
-    t.innerHTML = `<span>${type==='ok'?'✓':type==='err'?'⚠️':'ℹ️'}</span><span>${esc(msg)}</span>`;
-    $('toasts').appendChild(t);
-    setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); }, 3400);
+  function lockPage(){
+    root.removeAttribute('hidden');
+    document.documentElement.classList.add('ra-locked');
   }
 
-  async function logAction(action, target = {}, details = ''){
+  function feedback(form, message, type='err'){
+    const box = $(`[data-ra-fb="${form}"]`);
+    if (!box) return;
+    $('[data-ra-fb-text]', box).textContent = message;
+    box.querySelector('.ra-fi').textContent = type === 'ok' ? '✓' : '⚠️';
+    box.classList.remove('err','ok'); box.classList.add(type, 'show');
+  }
+  function clearFeedback(form){ const b = $(`[data-ra-fb="${form}"]`); if (b) b.classList.remove('show'); }
+  function clearAllFeedback(){ root.querySelectorAll('.ra-feedback').forEach(b => b.classList.remove('show')); }
+
+  function busy(btn, on, label){
+    if (!btn) return;
+    const span = btn.querySelector('[data-ra-btn-label]');
+    if (on){
+      btn.disabled = true; btn.dataset.raLabel = span ? span.textContent : '';
+      if (span) span.textContent = label || 'جاري المعالجة...';
+      const s = document.createElement('span'); s.className = 'ra-btn-spin'; s.setAttribute('data-ra-spin',''); btn.prepend(s);
+    } else {
+      btn.disabled = false;
+      const s = btn.querySelector('[data-ra-spin]'); if (s) s.remove();
+      if (span && btn.dataset.raLabel !== undefined) span.textContent = btn.dataset.raLabel;
+    }
+  }
+
+  /* ترجمة أخطاء Firebase إلى رسائل عربية واضحة (بدون كشف رسائل Firebase الأصلية) */
+  function humanError(err){
+    const code = (err && (err.code || err.message) || '').toString();
+    const map = {
+      'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
+      'auth/missing-password': 'يرجى إدخال كلمة المرور.',
+      'auth/wrong-password': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+      'auth/user-not-found': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+      'auth/invalid-credential': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+      'auth/invalid-login-credentials': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+      'auth/email-already-in-use': 'هذا البريد الإلكتروني مسجّل بالفعل.',
+      'auth/weak-password': 'كلمة المرور ضعيفة — استخدم ٦ أحرف على الأقل.',
+      'auth/too-many-requests': 'محاولات كثيرة جدًا. يرجى المحاولة بعد قليل.',
+      'auth/network-request-failed': 'تعذّر الاتصال بالشبكة. تحقّق من اتصالك بالإنترنت.',
+      'auth/user-disabled': 'تم تعطيل هذا الحساب.',
+      'permission-denied': 'ليست لديك صلاحية لتنفيذ هذه العملية.',
+      'unavailable': 'الخدمة غير متاحة حاليًا. حاول مرة أخرى.',
+    };
+    for (const key in map){ if (code.includes(key)) return map[key]; }
+    return 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.';
+  }
+
+  /* ====================================================================
+     تهيئة Firebase (المرحلة الثالثة) — والتحقق من نجاح التهيئة
+     ==================================================================== */
+  let app, auth, db;
+  try {
+    app  = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db   = getFirestore(app);
+  } catch (e) {
+    setLoading('تعذّر تشغيل النظام', 'حدثت مشكلة أثناء تهيئة الاتصال. يرجى إعادة تحميل الصفحة لاحقًا.');
+    throw e;
+  }
+
+  /* قراءة إعدادات النظام إن كانت متاحة (وإلا نستخدم الافتراضيات) */
+  let SETTINGS = { ...DEFAULT_SETTINGS };
+  let MESSAGES = { ...DEFAULT_MESSAGES };
+  (async () => {
     try {
-      const admin = auth.currentUser;
+      const snap = await getDoc(doc(db, 'settings', 'general'));
+      if (snap.exists()){
+        const d = snap.data();
+        SETTINGS = {
+          registrationEnabled: d.registrationEnabled ?? DEFAULT_SETTINGS.registrationEnabled,
+          emailVerificationRequired: d.emailVerificationRequired ?? DEFAULT_SETTINGS.emailVerificationRequired,
+        };
+        MESSAGES = {
+          pending:  d.pendingMessage  || DEFAULT_MESSAGES.pending,
+          blocked:  d.blockedMessage  || DEFAULT_MESSAGES.blocked,
+          rejected: d.rejectedMessage || DEFAULT_MESSAGES.rejected,
+        };
+      }
+    } catch (_) { /* غير مسموح بالقراءة للمستخدم العادي — نكمل بالافتراضيات */ }
+  })();
+
+  /* ====================================================================
+     تسجيل النشاط (Activity Logs)
+     ملاحظة: عنوان IP لا يمكن الحصول عليه بشكل موثوق من الواجهة الأمامية،
+     لذا يُترك null ويُملأ لاحقًا عبر خدمة إدارية آمنة إن لزم.
+     ==================================================================== */
+  async function logActivity(action, extra = {}){
+    try {
+      const u = auth.currentUser;
       await addDoc(collection(db, 'activityLogs'), {
         action,
-        uid: target.uid ?? null,
-        userEmail: target.email ?? null,
-        performedBy: admin ? admin.uid : null,
-        performedByEmail: admin ? admin.email : null,
-        details,
+        uid: extra.uid ?? (u ? u.uid : null),
+        userEmail: extra.userEmail ?? (u ? u.email : null),
+        performedBy: u ? u.uid : null,
+        performedByEmail: u ? u.email : null,
+        details: extra.details ?? '',
         ip: null,
         browser: navigator.userAgent,
         timestamp: serverTimestamp(),
       });
-    } catch (_) {}
+    } catch (_) { /* لا نُفشل العملية الأساسية إذا فشل التسجيل */ }
   }
 
-  /* ======= حالة عامة ======= */
-  let currentAdmin = null;
-  let usersCache = [];       // [{id, ...data}]
-  let logsCache  = [];
-  let activeFilter = 'all';
-  let userSearch = '';
-  let logSearch = '';
-  let unsubUsers = null, unsubLogs = null, unsubSettings = null;
+  /* ====================================================================
+     الحالة الداخلية
+     ==================================================================== */
+  let justLoggedIn = false;   // يُرفع فقط عند تسجيل دخول صريح لتحديث loginCount
+  let processing   = false;   // يمنع التعامل المزدوج مع onAuthStateChanged
+  let liveUnsub    = null;    // مستمع مستند المستخدم الحي (سحب الصلاحية / إنهاء الجلسات)
+  let sessionBaseline = 0;    // قيمة forceLogoutAt وقت الدخول — أي قيمة أحدث تعني إنهاء الجلسة
 
-  /* ======= التحقق من الصلاحية ======= */
+  /* ====================================================================
+     المُراقب الأساسي للجلسة (المرحلة الرابعة فصاعدًا)
+     ==================================================================== */
   onAuthStateChanged(auth, async (user) => {
     if (!user){
-      // لا جلسة → إلى صفحة تسجيل الدخول
-      location.replace(HOME_PAGE);
+      stopLiveGuard();
+      lockPage();
+      showView('login');
       return;
     }
+    if (processing) return;
+    processing = true;
+    lockPage();
+    setLoading('جاري التحقق...', 'يتم الآن التأكد من صلاحية حسابك.');
     try {
-      const snap = await getDoc(doc(db, 'users', user.uid));
-      if (snap.exists() && snap.data().role === 'admin'){
-        currentAdmin = { uid:user.uid, email:user.email, ...snap.data() };
-        enterAdmin();
-      } else {
-        denyAccess();
-      }
-    } catch (e){
-      denyAccess('تعذّر التحقق من الصلاحية. تأكّد من نشر قواعد الحماية.');
-    }
-  });
-
-  function denyAccess(msg){
-    $('gate-loading').hidden = true;
-    $('gate-denied').hidden = false;
-    if (msg) $('gate-denied').querySelector('.gate-sub').textContent = msg;
-    setTimeout(() => { signOut(auth).finally(() => location.replace(HOME_PAGE)); }, 2200);
-  }
-
-  function enterAdmin(){
-    $('gate').hidden = true;
-    $('app').hidden = false;
-    document.documentElement.classList.remove('locked');
-    $('admin-name').textContent = currentAdmin.name || 'أدمن';
-    $('admin-email').textContent = currentAdmin.email || '';
-    startListeners();
-  }
-
-  /* ======= المستمعات الحية ======= */
-  function startListeners(){
-    // المستخدمون
-    unsubUsers = onSnapshot(collection(db, 'users'), (qs) => {
-      usersCache = [];
-      qs.forEach(d => usersCache.push({ id:d.id, ...d.data() }));
-      usersCache.sort((a,b) => (b.createdAt?.toMillis?.()||0) - (a.createdAt?.toMillis?.()||0));
-      renderStats(); renderPending(); renderUsers();
-    }, () => toast('تعذّر تحميل المستخدمين', 'err'));
-
-    // سجل النشاط (أحدث 300)
-    unsubLogs = onSnapshot(query(collection(db,'activityLogs'), orderBy('timestamp','desc'), limit(300)), (qs) => {
-      logsCache = [];
-      qs.forEach(d => logsCache.push({ id:d.id, ...d.data() }));
-      renderStats(); renderLogs();
-    }, () => {});
-
-    // الإعدادات
-    unsubSettings = onSnapshot(doc(db,'settings','general'), (d) => {
-      if (d.exists()) fillSettings(d.data());
-    }, () => {});
-  }
-
-  /* ======= لوحة المعلومات ======= */
-  function renderStats(){
-    const c = { all:usersCache.length, approved:0, pending:0, blocked:0, rejected:0 };
-    usersCache.forEach(u => { if (c[u.status] !== undefined) c[u.status]++; });
-    const loginsToday = logsCache.filter(l => l.action==='login' && isToday(l.timestamp)).length;
-    const newToday    = usersCache.filter(u => isToday(u.createdAt)).length;
-
-    const cards = [
-      ['all','i-all','▦','إجمالي المستخدمين', c.all],
-      ['approved','i-ok','✓','Approved', c.approved],
-      ['pending','i-pend','🕓','Pending', c.pending],
-      ['blocked','i-block','⛔','Blocked', c.blocked],
-      ['rejected','i-rej','✕','Rejected', c.rejected],
-      ['login','i-login','→','تسجيلات اليوم', loginsToday],
-      ['new','i-new','＋','حسابات جديدة اليوم', newToday],
-    ];
-    $('stats').innerHTML = cards.map(([_,cls,ic,k,v]) =>
-      `<div class="stat"><div class="k"><i class="${cls}">${ic}</i>${k}</div><div class="v">${v}</div></div>`
-    ).join('');
-
-    // شارة طلبات التسجيل
-    const b = $('pending-badge');
-    if (c.pending > 0){ b.hidden=false; b.textContent = c.pending; } else { b.hidden=true; }
-  }
-
-  /* ======= طلبات التسجيل ======= */
-  function renderPending(){
-    const pend = usersCache.filter(u => u.status === 'pending');
-    const box = $('pending-list');
-    if (!pend.length){
-      box.innerHTML = `<div class="empty"><div class="e-ic">✓</div>لا توجد طلبات معلّقة حاليًا.</div>`;
-      return;
-    }
-    box.innerHTML = pend.map(u => userCard(u, ['approve','reject','delete'])).join('');
-  }
-
-  /* ======= إدارة المستخدمين ======= */
-  function renderUsers(){
-    let list = usersCache.slice();
-    if (activeFilter !== 'all') list = list.filter(u => u.status === activeFilter);
-    if (userSearch){
-      const q = userSearch.toLowerCase();
-      list = list.filter(u =>
-        (u.name||'').toLowerCase().includes(q) ||
-        (u.email||'').toLowerCase().includes(q) ||
-        (u.id||'').toLowerCase().includes(q));
-    }
-    const box = $('users-list');
-    if (!list.length){
-      box.innerHTML = `<div class="empty"><div class="e-ic">🔍</div>لا يوجد مستخدمون مطابقون.</div>`;
-      return;
-    }
-    box.innerHTML = list.map(u => userCard(u, 'full')).join('');
-  }
-
-  function userCard(u, actions){
-    const verified = u.emailVerified
-      ? `<span class="pill verify-yes">بريد مؤكَّد</span>`
-      : `<span class="pill verify-no">بريد غير مؤكَّد</span>`;
-    const roleTag = u.role === 'admin' ? `<span class="pill role">Admin</span>` : '';
-    const meta = actions === 'full'
-      ? `<div class="u-meta">
-           <span>الدور: <b>${esc(u.role||'user')}</b></span>
-           <span>آخر دخول: <b>${fmtDate(u.lastLogin)}</b></span>
-           <span>مرات الدخول: <b>${u.loginCount ?? 0}</b></span>
-           <span>أُنشئ: <b>${fmtDate(u.createdAt)}</b></span>
-         </div>`
-      : `<div class="u-meta">
-           <span>سجّل في: <b>${fmtDate(u.createdAt)}</b></span>
-         </div>`;
-    const reason = (u.status==='rejected' && u.rejectReason)
-      ? `<div class="u-meta"><span style="color:var(--red)">سبب الرفض: <b style="color:var(--red)">${esc(u.rejectReason)}</b></span></div>` : '';
-    const note = (u.adminNote)
-      ? `<div class="u-meta"><span>ملاحظة الأدمن: <b>${esc(u.adminNote)}</b></span></div>` : '';
-
-    return `
-    <div class="ucard" data-uid="${esc(u.id)}">
-      <div class="ucard-top">
-        <div class="avatar">${esc(initials(u.name,u.email))}</div>
-        <div class="u-main">
-          <div class="u-name">${esc(u.name||'—')} <span class="pill ${esc(u.status)}">${esc(u.status||'—')}</span> ${roleTag} ${verified}</div>
-          <div class="u-email">${esc(u.email||'—')}</div>
-          <div class="u-meta"><span>UID: <span class="uid">${esc(u.id)}</span></span></div>
-          ${meta}${reason}${note}
-        </div>
-      </div>
-      <div class="u-actions">${actionButtons(u, actions)}</div>
-    </div>`;
-  }
-
-  function actionButtons(u, mode){
-    const b = (act, label, cls='') => `<button class="act ${cls}" data-act="${act}" data-uid="${esc(u.id)}">${label}</button>`;
-    if (mode !== 'full'){ // بطاقة طلب تسجيل
-      return b('approve','قبول','primary') + b('reject','رفض') + b('delete','حذف','danger');
-    }
-    let out = '';
-    if (u.status !== 'approved') out += b('approve','قبول','primary');
-    if (u.status !== 'rejected') out += b('reject','رفض');
-    if (u.status === 'blocked')  out += b('unblock','إلغاء الإيقاف');
-    else                         out += b('block','إيقاف');
-    out += b('editName','تعديل الاسم');
-    out += b('resetPassword','إعادة كلمة المرور');
-    out += b('resendVerification','إعادة رسالة التحقق');
-    out += b('logoutAll','إنهاء كل الجلسات');
-    out += b('adminNote','ملاحظات');
-    out += b('delete','حذف','danger');
-    return out;
-  }
-
-  /* ======= سجل النشاط ======= */
-  const actionLabels = {
-    login:'تسجيل دخول', logout:'تسجيل خروج', register:'إنشاء حساب', approve:'موافقة',
-    reject:'رفض', block:'إيقاف', unblock:'إلغاء إيقاف', delete:'حذف',
-    password_reset:'إعادة كلمة المرور', email_verification:'تحقق بريد',
-    settings_update:'تعديل إعدادات', edit_name:'تعديل اسم', admin_note:'ملاحظة أدمن',
-    force_logout:'إنهاء الجلسات', resend_verification:'إعادة رسالة تحقق'
-  };
-  function renderLogs(){
-    let list = logsCache.slice();
-    if (logSearch){
-      const q = logSearch.toLowerCase();
-      list = list.filter(l =>
-        (actionLabels[l.action]||l.action||'').toLowerCase().includes(q) ||
-        (l.action||'').toLowerCase().includes(q) ||
-        (l.userEmail||'').toLowerCase().includes(q) ||
-        (l.performedByEmail||'').toLowerCase().includes(q) ||
-        (l.details||'').toLowerCase().includes(q));
-    }
-    const box = $('logs-list');
-    if (!list.length){
-      box.innerHTML = `<div class="empty"><div class="e-ic">📜</div>لا توجد سجلات.</div>`;
-      return;
-    }
-    const head = `<div class="log-row head"><div>الوقت</div><div>العملية</div><div>التفاصيل</div><div>نفّذها</div></div>`;
-    box.innerHTML = head + list.map(l => `
-      <div class="log-row">
-        <div class="log-time">${fmtDate(l.timestamp)}</div>
-        <div><span class="log-act ${esc(l.action||'')}">${esc(actionLabels[l.action]||l.action||'—')}</span></div>
-        <div><div>${esc(l.details||'—')}</div>${l.userEmail?`<div class="log-mail">${esc(l.userEmail)}</div>`:''}</div>
-        <div class="log-mail">${esc(l.performedByEmail||'—')}</div>
-      </div>`).join('');
-  }
-
-  /* ======= الإعدادات ======= */
-  function fillSettings(s){
-    $('s-registration').checked = s.registrationEnabled ?? true;
-    $('s-emailverify').checked   = s.emailVerificationRequired ?? false;
-    $('s-maintenance').checked   = s.maintenanceMode ?? false;
-    $('s-remember').checked      = s.allowRememberMe ?? true;
-    $('s-timeout').value  = s.sessionTimeout ?? 0;
-    $('s-attempts').value = s.maxLoginAttempts ?? 5;
-    $('s-msg-pending').value  = s.pendingMessage  ?? '';
-    $('s-msg-blocked').value  = s.blockedMessage  ?? '';
-    $('s-msg-rejected').value = s.rejectedMessage ?? '';
-  }
-  async function saveSettings(){
-    const btn = $('save-settings'); btn.disabled = true;
-    $('settings-status').textContent = 'جاري الحفظ...';
-    try {
-      await setDoc(doc(db,'settings','general'), {
-        registrationEnabled: $('s-registration').checked,
-        emailVerificationRequired: $('s-emailverify').checked,
-        maintenanceMode: $('s-maintenance').checked,
-        allowRememberMe: $('s-remember').checked,
-        sessionTimeout: Number($('s-timeout').value) || 0,
-        maxLoginAttempts: Number($('s-attempts').value) || 0,
-        pendingMessage: $('s-msg-pending').value.trim(),
-        blockedMessage: $('s-msg-blocked').value.trim(),
-        rejectedMessage: $('s-msg-rejected').value.trim(),
-        updatedAt: serverTimestamp(),
-      }, { merge:true });
-      await logAction('settings_update', {}, 'تحديث إعدادات النظام');
-      $('settings-status').textContent = 'تم الحفظ ✓';
-      toast('تم حفظ الإعدادات');
-    } catch (e){
-      $('settings-status').textContent = '';
-      toast('تعذّر الحفظ — تحقّق من الصلاحيات', 'err');
+      await handleSignedInUser(user);
+    } catch (err) {
+      handleFatal(err);
     } finally {
-      btn.disabled = false;
-      setTimeout(()=> $('settings-status').textContent='', 2500);
-    }
-  }
-
-  /* ======= إجراءات المستخدم ======= */
-  function findUser(uid){ return usersCache.find(u => u.id === uid); }
-
-  async function approveUser(uid){
-    const u = findUser(uid); if (!u) return;
-    await updateDoc(doc(db,'users',uid), {
-      status:'approved', approvedAt:serverTimestamp(), approvedBy:currentAdmin.uid, updatedAt:serverTimestamp()
-    });
-    await logAction('approve', {uid, email:u.email}, `الموافقة على ${u.email||uid}`);
-    toast('تمت الموافقة على الحساب');
-  }
-  async function blockUser(uid){
-    const u = findUser(uid); if (!u) return;
-    await updateDoc(doc(db,'users',uid), {
-      status:'blocked', disabledAt:serverTimestamp(), disabledBy:currentAdmin.uid, updatedAt:serverTimestamp()
-    });
-    await logAction('block', {uid, email:u.email}, `إيقاف ${u.email||uid}`);
-    toast('تم إيقاف الحساب');
-  }
-  async function unblockUser(uid){
-    const u = findUser(uid); if (!u) return;
-    await updateDoc(doc(db,'users',uid), { status:'approved', updatedAt:serverTimestamp() });
-    await logAction('unblock', {uid, email:u.email}, `إلغاء إيقاف ${u.email||uid}`);
-    toast('تم تفعيل الحساب مجددًا');
-  }
-  async function resetPassword(uid){
-    const u = findUser(uid); if (!u || !u.email) return;
-    await sendPasswordResetEmail(auth, u.email);
-    await logAction('password_reset', {uid, email:u.email}, `إرسال إعادة تعيين كلمة المرور إلى ${u.email}`);
-    toast('تم إرسال رابط إعادة تعيين كلمة المرور');
-  }
-  async function logoutAllSessions(uid){
-    const u = findUser(uid); if (!u) return;
-    await updateDoc(doc(db,'users',uid), { forceLogoutAt:serverTimestamp(), updatedAt:serverTimestamp() });
-    await logAction('force_logout', {uid, email:u.email}, `إنهاء جلسات ${u.email||uid}`);
-    toast('سيتم إنهاء جلسات المستخدم النشطة خلال لحظات');
-  }
-  function resendVerification(uid){
-    const u = findUser(uid); if (!u) return;
-    // ملاحظة صادقة: لا يمكن للواجهة الأمامية إرسال رسالة تحقق لمستخدم آخر عبر Firebase.
-    toast('إعادة رسالة التحقق لمستخدم آخر تتطلب خدمة إدارية آمنة (Cloud Function).', 'info');
-    logAction('resend_verification', {uid, email:u.email}, 'طلب إعادة رسالة تحقق (يتطلب خدمة إدارية)');
-  }
-
-  /* ======= النوافذ ======= */
-  let modalConfirmFn = null;
-  function openModal({ title, desc='', bodyHTML='', confirmText='تأكيد', danger=false, onConfirm }){
-    $('modal-title').textContent = title;
-    $('modal-desc').textContent = desc;
-    $('modal-desc').style.display = desc ? 'block' : 'none';
-    $('modal-body').innerHTML = bodyHTML;
-    $('modal-err').textContent = '';
-    const c = $('modal-confirm');
-    c.textContent = confirmText;
-    c.className = danger ? 'btn' : 'btn';
-    c.style.background = danger ? 'linear-gradient(135deg,#ef4444,#dc2626)' : '';
-    modalConfirmFn = onConfirm;
-    $('modal-scrim').classList.add('show');
-    const first = $('modal-body').querySelector('textarea,input');
-    if (first) setTimeout(()=>first.focus(), 50);
-  }
-  function closeModal(){ $('modal-scrim').classList.remove('show'); modalConfirmFn = null; }
-
-  function rejectModal(uid){
-    const u = findUser(uid); if (!u) return;
-    openModal({
-      title:'رفض الطلب', desc:`سيتم رفض حساب ${u.email||uid}. يجب إدخال سبب الرفض.`,
-      bodyHTML:`<textarea id="reject-reason" placeholder="اكتب سبب الرفض..."></textarea>`,
-      confirmText:'رفض الحساب', danger:true,
-      onConfirm: async () => {
-        const reason = document.getElementById('reject-reason').value.trim();
-        if (!reason){ $('modal-err').textContent = 'سبب الرفض مطلوب.'; return false; }
-        await updateDoc(doc(db,'users',uid), { status:'rejected', rejectReason:reason, updatedAt:serverTimestamp() });
-        await logAction('reject', {uid, email:u.email}, `رفض ${u.email||uid}: ${reason}`);
-        toast('تم رفض الطلب');
-      }
-    });
-  }
-  function deleteModal(uid){
-    const u = findUser(uid); if (!u) return;
-    openModal({
-      title:'حذف المستخدم',
-      desc:`سيتم حذف بيانات ${u.email||uid} من Firestore نهائيًا. ملاحظة: لا يمكن حذف حساب المصادقة (Authentication) من الواجهة الأمامية؛ سيبقى ويُحذف لاحقًا عبر خدمة إدارية آمنة.`,
-      confirmText:'حذف نهائيًا', danger:true,
-      onConfirm: async () => {
-        await deleteDoc(doc(db,'users',uid));
-        await logAction('delete', {uid, email:u.email}, `حذف بيانات ${u.email||uid} من Firestore`);
-        toast('تم حذف بيانات المستخدم');
-      }
-    });
-  }
-  function editNameModal(uid){
-    const u = findUser(uid); if (!u) return;
-    openModal({
-      title:'تعديل الاسم', desc:'لا يمكن تعديل البريد الإلكتروني لأنه يعتمد عليه نظام المصادقة.',
-      bodyHTML:`<input id="edit-name-val" type="text" value="${esc(u.name||'')}" placeholder="الاسم الجديد" />`,
-      confirmText:'حفظ',
-      onConfirm: async () => {
-        const name = document.getElementById('edit-name-val').value.trim();
-        if (name.length < 2){ $('modal-err').textContent = 'الاسم قصير جدًا.'; return false; }
-        await updateDoc(doc(db,'users',uid), { name, updatedAt:serverTimestamp() });
-        await logAction('edit_name', {uid, email:u.email}, `تعديل الاسم إلى "${name}"`);
-        toast('تم تحديث الاسم');
-      }
-    });
-  }
-  function adminNoteModal(uid){
-    const u = findUser(uid); if (!u) return;
-    openModal({
-      title:'ملاحظات الأدمن', desc:'ملاحظة خاصة لا تظهر للمستخدم.',
-      bodyHTML:`<textarea id="admin-note-val" placeholder="اكتب ملاحظة...">${esc(u.adminNote||'')}</textarea>`,
-      confirmText:'حفظ',
-      onConfirm: async () => {
-        const note = document.getElementById('admin-note-val').value.trim();
-        await updateDoc(doc(db,'users',uid), { adminNote:note, updatedAt:serverTimestamp() });
-        await logAction('admin_note', {uid, email:u.email}, 'تحديث ملاحظة الأدمن');
-        toast('تم حفظ الملاحظة');
-      }
-    });
-  }
-
-  /* ======= ربط الأحداث ======= */
-  // التنقل بين الأقسام
-  document.querySelectorAll('.nav-item').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const sec = btn.dataset.sec;
-      document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.dataset.section === sec));
-      closeNav();
-    });
-  });
-
-  // قائمة الجوال
-  function openNav(){ $('aside').classList.add('open'); $('scrim-nav').classList.add('show'); }
-  function closeNav(){ $('aside').classList.remove('open'); $('scrim-nav').classList.remove('show'); }
-  ['menu-btn','menu-btn2','menu-btn3','menu-btn4','menu-btn5'].forEach(id => { const el=$(id); if (el) el.addEventListener('click', openNav); });
-  $('scrim-nav').addEventListener('click', closeNav);
-
-  // أزرار إجراءات المستخدمين (تفويض الحدث)
-  document.getElementById('app').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-act]');
-    if (!btn) return;
-    const uid = btn.dataset.uid, act = btn.dataset.act;
-    switch (act){
-      case 'approve': approveUser(uid).catch(err => toast(actErr(err),'err')); break;
-      case 'block': blockUser(uid).catch(err => toast(actErr(err),'err')); break;
-      case 'unblock': unblockUser(uid).catch(err => toast(actErr(err),'err')); break;
-      case 'resetPassword': resetPassword(uid).catch(err => toast(actErr(err),'err')); break;
-      case 'logoutAll': logoutAllSessions(uid).catch(err => toast(actErr(err),'err')); break;
-      case 'resendVerification': resendVerification(uid); break;
-      case 'reject': rejectModal(uid); break;
-      case 'delete': deleteModal(uid); break;
-      case 'editName': editNameModal(uid); break;
-      case 'adminNote': adminNoteModal(uid); break;
+      processing = false;
     }
   });
-  function actErr(err){
-    const c = (err?.code||'').toString();
-    if (c.includes('permission-denied')) return 'صلاحية مرفوضة — تحقّق من قواعد Firestore.';
-    return 'تعذّر تنفيذ العملية.';
-  }
 
-  // بحث وفلاتر
-  $('user-search').addEventListener('input', e => { userSearch = e.target.value.trim(); renderUsers(); });
-  $('log-search').addEventListener('input', e => { logSearch = e.target.value.trim(); renderLogs(); });
-  document.querySelectorAll('#filters .chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      document.querySelectorAll('#filters .chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      activeFilter = chip.dataset.filter;
-      renderUsers();
-    });
-  });
-
-  // النوافذ
-  $('modal-confirm').addEventListener('click', async () => {
-    if (!modalConfirmFn) return;
-    const btn = $('modal-confirm'); btn.disabled = true;
+  async function handleSignedInUser(user){
+    // المرحلة الخامسة: قراءة Document المستخدم
+    const ref  = doc(db, 'users', user.uid);
+    let snap;
     try {
-      const res = await modalConfirmFn();
-      if (res !== false) closeModal();
-    } catch (err){
-      $('modal-err').textContent = actErr(err);
-    } finally { btn.disabled = false; }
-  });
-  $('modal-cancel').addEventListener('click', closeModal);
-  $('modal-scrim').addEventListener('click', e => { if (e.target === $('modal-scrim')) closeModal(); });
+      snap = await getDoc(ref);
+    } catch (err) {
+      throw err; // تُعالَج في handleFatal
+    }
 
-  // الإعدادات + الخروج
-  $('save-settings').addEventListener('click', saveSettings);
-  $('logout').addEventListener('click', async () => {
-    await logAction('logout', {uid:currentAdmin?.uid, email:currentAdmin?.email}, 'خروج الأدمن');
-    [unsubUsers, unsubLogs, unsubSettings].forEach(fn => fn && fn());
-    await signOut(auth);
-    location.replace(HOME_PAGE);
+    if (!snap.exists()){
+      // Document مفقود → الحساب غير مكتمل → تسجيل خروج ومنع
+      await signOut(auth);
+      showState({
+        icon: 'stop', title: 'حساب غير مكتمل',
+        text: 'تعذّر العثور على بيانات حسابك. يرجى التواصل مع الإدارة أو إنشاء الحساب من جديد.'
+      });
+      return;
+    }
+
+    const data = snap.data();
+
+    // المرحلة السادسة: فحص الحالة
+    switch (data.status){
+      case 'pending':
+        showState({ icon:'wait', title:'بانتظار الموافقة', text: MESSAGES.pending });
+        return;
+      case 'blocked':
+        showState({ icon:'stop', title:'حساب موقوف', text: MESSAGES.blocked });
+        return;
+      case 'rejected':
+        showState({
+          icon:'stop', title:'تم رفض الطلب', text: MESSAGES.rejected,
+          reason: (data.rejectReason && String(data.rejectReason).trim()) ? data.rejectReason : null
+        });
+        return;
+      case 'approved':
+        break; // متابعة
+      default:
+        showState({ icon:'stop', title:'حالة غير معروفة', text:'حالة حسابك غير صالحة. يرجى التواصل مع الإدارة.' });
+        return;
+    }
+
+    // المرحلة السابعة: تحديث بيانات الدخول عند تسجيل الدخول الصريح فقط (لتقليل عمليات الكتابة)
+    if (justLoggedIn){
+      justLoggedIn = false;
+      try {
+        await updateDoc(ref, {
+          lastLogin: serverTimestamp(),
+          loginCount: increment(1),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (_) { /* لا يمنع الدخول إن فشل التحديث */ }
+      logActivity('login', { uid:user.uid, userEmail:user.email, details:'تسجيل دخول ناجح' });
+    }
+
+    // المرحلة الثامنة: إظهار الصفحة
+    sessionBaseline = tsMillis(data.forceLogoutAt);
+    revealPage(data);
+    startLiveGuard(ref);
+  }
+
+  // تحويل Timestamp إلى ميلي ثانية بأمان
+  function tsMillis(t){ return (t && typeof t.toMillis === 'function') ? t.toMillis() : 0; }
+
+  // المستمع الحي: يراقب مستند المستخدم أثناء عرض الصفحة.
+  // يسحب الوصول فورًا إذا تغيّرت الحالة، أو حُذف الحساب، أو طلب الأدمن إنهاء الجلسات.
+  function startLiveGuard(ref){
+    stopLiveGuard();
+    liveUnsub = onSnapshot(ref, (snap) => {
+      if (!snap.exists()){ forceSignOut(); return; }              // حُذف الحساب
+      const d = snap.data();
+      if (d.status !== 'approved'){ liveRelock(d); return; }      // سُحبت الصلاحية (blocked/rejected/pending)
+      if (tsMillis(d.forceLogoutAt) > sessionBaseline){ forceSignOut(); return; } // إنهاء كل الجلسات
+    }, () => { /* تجاهل أخطاء المستمع المؤقتة */ });
+  }
+  function stopLiveGuard(){ if (liveUnsub){ liveUnsub(); liveUnsub = null; } }
+
+  // إعادة قفل الصفحة وإظهار شاشة الحالة المناسبة عند سحب الصلاحية أثناء الاستخدام
+  function liveRelock(d){
+    stopLiveGuard();
+    switch (d.status){
+      case 'pending':
+        showState({ icon:'wait', title:'بانتظار الموافقة', text: MESSAGES.pending }); break;
+      case 'blocked':
+        showState({ icon:'stop', title:'حساب موقوف', text: MESSAGES.blocked }); break;
+      case 'rejected':
+        showState({ icon:'stop', title:'تم رفض الطلب', text: MESSAGES.rejected,
+          reason: (d.rejectReason && String(d.rejectReason).trim()) ? d.rejectReason : null }); break;
+      default:
+        showState({ icon:'stop', title:'تعذّر المتابعة', text:'تم تغيير حالة حسابك. يرجى تسجيل الدخول مجددًا.' });
+    }
+  }
+  async function forceSignOut(){
+    stopLiveGuard();
+    try { await signOut(auth); } catch(_) {}
+    // onAuthStateChanged سيتكفّل بإظهار شاشة تسجيل الدخول وقفل الصفحة.
+  }
+
+  function handleFatal(err){
+    const code = (err && (err.code || err.message) || '').toString();
+    if (code.includes('permission-denied')){
+      showState({ icon:'stop', title:'صلاحية مرفوضة', text:'تعذّر الوصول إلى بياناتك. يرجى التواصل مع الإدارة.' });
+    } else if (code.includes('unavailable') || code.includes('network')){
+      setLoading('مشكلة في الاتصال', 'تعذّر الاتصال بالخادم. تحقّق من اتصالك بالإنترنت ثم أعد تحميل الصفحة.');
+    } else {
+      setLoading('حدث خطأ', 'حدث خطأ غير متوقع. يرجى إعادة تحميل الصفحة.');
+    }
+  }
+
+  function showState({ icon, title, text, reason=null }){
+    lockPage();
+    const iconEl = $('[data-ra-state-icon]');
+    iconEl.className = 'ra-state-icon ' + (icon || 'wait');
+    iconEl.textContent = icon === 'stop' ? '⛔' : icon === 'ok' ? '✓' : '⏳';
+    $('[data-ra-state-title]').textContent = title;
+    $('[data-ra-state-text]').textContent  = text;
+    const reasonBox = $('[data-ra-state-reason]');
+    if (reason){ $('[data-ra-state-reason-text]').textContent = reason; reasonBox.hidden = false; }
+    else { reasonBox.hidden = true; }
+    showView('state');
+  }
+
+  /* ====================================================================
+     الإجراءات: تسجيل الدخول / التسجيل / استعادة كلمة المرور / الخروج
+     ==================================================================== */
+
+  // تسجيل الدخول (Login Flow — القسم 17)
+  async function doLogin(btn){
+    clearFeedback('login');
+    const email = $('#ra-login-email').value.trim();
+    const pass  = $('#ra-login-pass').value;
+    const remember = $('#ra-remember').checked;
+
+    if (!email){ feedback('login','يرجى إدخال البريد الإلكتروني.'); return; }
+    if (!pass){  feedback('login','يرجى إدخال كلمة المرور.'); return; }
+
+    busy(btn, true, 'جاري تسجيل الدخول...');
+    try {
+      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+      justLoggedIn = true;
+      await signInWithEmailAndPassword(auth, email, pass);
+      // onAuthStateChanged سيتولّى بقية الدورة (فحص Firestore والحالة).
+    } catch (err) {
+      justLoggedIn = false;
+      busy(btn, false);
+      feedback('login', humanError(err));
+    }
+  }
+
+  // إنشاء الحساب (Registration Flow — القسم 16)
+  async function doRegister(btn){
+    clearFeedback('register');
+    if (SETTINGS.registrationEnabled === false){
+      feedback('register','التسجيل مغلق حاليًا. يرجى التواصل مع الإدارة.'); return;
+    }
+    const name  = $('#ra-reg-name').value.trim();
+    const email = $('#ra-reg-email').value.trim();
+    const pass  = $('#ra-reg-pass').value;
+
+    if (name.length < 2){ feedback('register','يرجى إدخال الاسم الكامل.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ feedback('register','صيغة البريد الإلكتروني غير صحيحة.'); return; }
+    if (pass.length < 6){ feedback('register','كلمة المرور يجب أن تكون ٦ أحرف على الأقل.'); return; }
+
+    busy(btn, true, 'جاري إنشاء الحساب...');
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      const uid  = cred.user.uid;
+
+      // إنشاء Document فورًا في Firestore — لا يُترك مستخدم في Authentication بلا Document
+      await setDoc(doc(db, 'users', uid), {
+        uid,
+        name,
+        email,
+        photoURL: '',
+        role: 'user',
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        approvedAt: null,
+        disabledAt: null,
+        lastLogin: null,
+        loginCount: 0,
+        emailVerified: false,
+        adminNote: '',
+        rejectReason: '',
+        approvedBy: null,
+        disabledBy: null,
+      });
+
+      // إرسال رسالة التحقق إن كانت الخاصية مفعّلة
+      if (SETTINGS.emailVerificationRequired){
+        try { await sendEmailVerification(cred.user); } catch (_) {}
+      }
+
+      logActivity('register', { uid, userEmail:email, details:'إنشاء حساب جديد' });
+
+      // رسالة نجاح التسجيل ثم شاشة "بانتظار الموافقة" (لأن الحالة pending)
+      showState({
+        icon:'ok', title:'تم إنشاء حسابك بنجاح',
+        text:'حسابك الآن بانتظار موافقة الإدارة. ستتمكن من استخدام جميع الخدمات بعد الموافقة'
+             + (SETTINGS.emailVerificationRequired ? '، وقد أرسلنا رسالة تحقق إلى بريدك.' : '.')
+      });
+    } catch (err) {
+      busy(btn, false);
+      feedback('register', humanError(err));
+    }
+  }
+
+  // استعادة كلمة المرور (Password Reset Flow — القسم 19)
+  async function doForgot(btn){
+    clearFeedback('forgot');
+    const email = $('#ra-forgot-email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ feedback('forgot','يرجى إدخال بريد إلكتروني صحيح.'); return; }
+
+    busy(btn, true, 'جاري الإرسال...');
+    try {
+      await sendPasswordResetEmail(auth, email);
+      feedback('forgot','إذا كان البريد مسجّلًا لدينا، فقد أُرسل إليه رابط إعادة التعيين. تحقّق من صندوق الوارد.', 'ok');
+      $('#ra-forgot-email').value = '';
+    } catch (err) {
+      feedback('forgot', humanError(err));
+    } finally {
+      busy(btn, false);
+    }
+  }
+
+  // تسجيل الخروج (Logout Flow — القسم 18)
+  async function doLogout(){
+    try {
+      const u = auth.currentUser;
+      if (u) await logActivity('logout', { uid:u.uid, userEmail:u.email, details:'تسجيل خروج' });
+      stopLiveGuard();
+      await signOut(auth);
+      // onAuthStateChanged يعيد شاشة تسجيل الدخول ويقفل الصفحة تلقائيًا.
+    } catch (err) {
+      alert(humanError(err));
+    }
+  }
+
+  /* ====================================================================
+     ربط الأحداث
+     ==================================================================== */
+  // التنقل بين الواجهات
+  root.querySelectorAll('[data-ra-go]').forEach(link => {
+    link.addEventListener('click', () => showView(link.dataset.raGo));
+  });
+
+  // أزرار الإجراءات داخل الكتلة
+  root.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-ra-action]');
+    if (!btn) return;
+    const action = btn.dataset.raAction;
+    if (action === 'login')          doLogin(btn);
+    else if (action === 'register')  doRegister(btn);
+    else if (action === 'forgot')    doForgot(btn);
+    else if (action === 'switch-account'){ signOut(auth); }
+  });
+
+  // إرسال النماذج بمفتاح Enter
+  const enterMap = [
+    ['#ra-login-pass',  'login'], ['#ra-login-email', 'login'],
+    ['#ra-reg-pass',    'register'],
+    ['#ra-forgot-email','forgot'],
+  ];
+  enterMap.forEach(([sel, action]) => {
+    const el = $(sel);
+    if (el) el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter'){ e.preventDefault(); const b = $(`[data-ra-action="${action}"]`); if (b) b.click(); }
+    });
+  });
+
+  // زر تسجيل الخروج في محتوى الصفحة (اختياري — أي عنصر يحمل data-ra-logout)
+  document.querySelectorAll('[data-ra-logout]').forEach(b => b.addEventListener('click', doLogout));
+
+  // كشف انقطاع الاتصال بالإنترنت
+  window.addEventListener('offline', () => {
+    if (root.hasAttribute('hidden')) return; // الصفحة ظاهرة بالفعل، لا نقفلها
   });
 </script>
+<!-- ======================  نهاية الجزء (ب) من RA Secure Block  ====================== -->
 </body>
 </html>
